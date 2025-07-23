@@ -1,0 +1,102 @@
+import mill.*, scalalib.*, publish.*
+import mill.api.Task.Simple
+
+// ========= Common Build Definitions =========
+object Common {
+  val organization = "com.github.h-ayat"
+  val version = "0.1.2-SNAPSHOT"
+  val scalaVersion = "3.3.6"
+
+  val baseScalacOptions = Seq(
+    "-deprecation",
+    "-feature",
+    "-unchecked",
+    "-language:strictEquality",
+    "-language:implicitConversions",
+    "-Ykind-projector:underscores",
+    "-release:17"
+  )
+
+  val ciScalacOptions = Seq(
+    "-Xfatal-warnings",
+    "-Yno-decode-stacktraces"
+  )
+
+  val devScalacOptions = Seq(
+    "-explain",
+    "-explain-types",
+    "-source:future"
+  )
+
+  def scalacOptions = {
+    val isCI = sys.env.get("CI").contains("true")
+    if (isCI) baseScalacOptions ++ ciScalacOptions
+    else baseScalacOptions ++ devScalacOptions
+  }
+
+  val testDependencies = Seq(
+    mvn"org.scalatest::scalatest:3.2.19"
+  )
+
+  val forkTestOptions = Seq("-Xmx2G", "-Xss4M")
+
+}
+
+trait CommonModule extends ScalaModule with PublishModule {
+  override def scalaVersion = Common.scalaVersion
+  override def scalacOptions = Common.scalacOptions
+  def forkArgs = Common.forkTestOptions
+  def description: String
+
+  override def publishVersion = Common.version
+  override def pomSettings = PomSettings(
+    description = description,
+    organization = Common.organization,
+    url = "https://github.com/h-ayat/gagool",
+    licenses = Seq(License.MIT),
+    versionControl = VersionControl.github("h-ayat", "gagool"),
+    developers =
+      Seq(Developer("h-ayat", "h-ayat", "https://github.com/h-ayat/gagool"))
+  )
+
+  override def artifactId = "gagool-" + super.artifactName()
+
+  trait CommonTest extends ScalaTests with TestModule.ScalaTest {
+    def mvnDeps = Seq(
+      mvn"org.scalatest::scalatest:3.2.19"
+    )
+  }
+}
+
+// ========= Module Definitions =========
+
+/** Core module providing MongoDB reactive streams driver integration */
+object core extends CommonModule {
+  val description = "Core Module"
+  def mvnDeps = Seq(
+    mvn"org.mongodb:mongodb-driver-reactivestreams:5.5.1"
+  )
+}
+
+/** BSON serialization module with dependency on core MongoDB functionality */
+object bson extends CommonModule {
+  val description = "Basic bson definitions and macros Module"
+  def moduleDeps = Seq(core)
+
+  object test extends CommonTest
+}
+
+/** Connection module with embedded MongoDB support for testing */
+object con extends CommonModule {
+  val description = "Mongodb connection and commands module"
+  def moduleDeps = Seq(bson)
+  def mvnDeps = Seq(
+    mvn"de.flapdoodle.embed:de.flapdoodle.embed.mongo:4.21.0"
+  )
+
+  object test extends CommonTest {
+    override def mvnDeps = super.mvnDeps() ++ Seq(
+      mvn"de.flapdoodle.embed:de.flapdoodle.embed.mongo:4.21.0"
+    )
+  }
+}
