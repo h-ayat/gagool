@@ -59,7 +59,7 @@ trait CommonModule extends ScalaModule with PublishModule {
       Seq(Developer("h-ayat", "h-ayat", "https://github.com/h-ayat/gagool"))
   )
 
-  override def artifactId = "gagool-" + super.artifactName()
+  override def artifactName = "gagool-" + super.artifactName()
 
   trait CommonTest extends ScalaTests with TestModule.ScalaTest {
     def mvnDeps = Seq(
