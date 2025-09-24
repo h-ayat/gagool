@@ -1,10 +1,13 @@
+//| mill-version: 1.0.5
+//| mill-jvm-version: 17
+
 import mill.*, scalalib.*, publish.*
 import mill.api.Task.Simple
 
 // ========= Common Build Definitions =========
 object Common {
   val organization = "com.github.h-ayat"
-  val version = "0.1.2-SNAPSHOT"
+  val version = "0.2.0"
   val scalaVersion = "3.3.6"
 
   val baseScalacOptions = Seq(

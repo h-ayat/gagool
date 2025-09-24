@@ -5,6 +5,7 @@ import org.scalatest.matchers.should.Matchers
 import org.bson.*
 import scala.util.Try
 import BaseCodecs.given
+import gagool.bson.Adt.SingletonType
 
 private final case class Age(value: Int) extends AnyVal
 private case class CustomerId(value: String)
@@ -19,14 +20,15 @@ private sealed trait Shape
 private case class Circle(radius: Double) extends Shape
 private case class Rectangle(width: Double, height: Double) extends Shape
 
-private type Parent2 = Circle | Address
-
 private object ParentObject:
   sealed trait NumberOrString
   case class NumVal(n: Int) extends NumberOrString
   case class StrVal(s: String) extends NumberOrString
 
-private object SingletonType
+private sealed trait Adt
+private object Adt:
+  object SingletonType extends Adt
+  final case class CaseClass(a: String) extends Adt
 
 class MacroSpec extends AnyFlatSpec with Matchers:
 
@@ -89,8 +91,8 @@ class MacroSpec extends AnyFlatSpec with Matchers:
   }
 
   "Macros.manual".should("derive codec for complex case class") in {
-    given BsonDocCodec[Address] = Macros.manual[Address]
-    val codec = Macros.manual[Person]
+    given BsonDocCodec[Address] = Macros.product[Address]
+    val codec = Macros.product[Person]
 
     val original = Person("Alice", 30, Address("Main St", 123))
     val encoded = codec.encode(original)
@@ -100,8 +102,8 @@ class MacroSpec extends AnyFlatSpec with Matchers:
   }
 
   "Macros.singleton".should("derive codec for singleton type") in {
-    val codec = Macros.singleton[SingletonType.type]
-    val original = SingletonType
+    val codec = Macros.singleton[Adt.SingletonType.type]
+    val original = Adt.SingletonType
     val encoded = codec.encode(original)
     println("----------------" + original + encoded)
     val decoded = codec.decode(encoded).get
@@ -109,10 +111,9 @@ class MacroSpec extends AnyFlatSpec with Matchers:
   }
 
   "Macros.sealedTrait".should("derive codec for sealed trait hierarchy") in {
-
-    given BsonDocCodec[Circle] = Macros.manual[Circle]
-    given BsonDocCodec[Rectangle] = Macros.manual[Rectangle]
-    val codec = Macros.sealedTrait[Shape]
+    given BsonDocCodec[Circle] = Macros.product[Circle]
+    given BsonDocCodec[Rectangle] = Macros.product[Rectangle]
+    val codec = Macros.sum[Shape]
 
     val circle: Shape = Circle(5.0)
     val rectangle: Shape = Rectangle(4.0, 6.0)
@@ -128,11 +129,23 @@ class MacroSpec extends AnyFlatSpec with Matchers:
     decodedRect shouldEqual rectangle
   }
 
+  it.should("derive codec for ADTs") in {
+    given BsonDocCodec[Adt.SingletonType.type] =
+      Macros.singleton[Adt.SingletonType.type]
+    given BsonDocCodec[Adt.CaseClass] = Macros.product[Adt.CaseClass]
+    val codec = Macros.sum[Adt]
+    val a = Adt.SingletonType
+    val b = Adt.CaseClass("name")
+
+    codec.decode(codec.encode(a)).get shouldEqual a
+    codec.decode(codec.encode(b)).get shouldEqual b
+  }
+
   it.should("handle union types via sealed trait") in {
     import ParentObject.{NumVal, StrVal, NumberOrString}
-    given BsonDocCodec[NumVal] = Macros.manual[NumVal]
-    given BsonDocCodec[StrVal] = Macros.manual[StrVal]
-    val codec = Macros.sealedTrait[NumberOrString]
+    given BsonDocCodec[NumVal] = Macros.product[NumVal]
+    given BsonDocCodec[StrVal] = Macros.product[StrVal]
+    val codec = Macros.sum[NumberOrString]
 
     val num: NumberOrString = NumVal(42)
     val str: NumberOrString = StrVal("hello")

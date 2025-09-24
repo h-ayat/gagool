@@ -67,7 +67,7 @@ object Macros:
    *    Requires given codecs for *all* fields.
    * ----------------------------------------- */
 
-  inline def manual[T](using m: Mirror.ProductOf[T]): BsonDocCodec[T] =
+  inline def product[T](using m: Mirror.ProductOf[T]): BsonDocCodec[T] =
     type Labels = m.MirroredElemLabels
     type Types = m.MirroredElemTypes
 
@@ -109,16 +109,6 @@ object Macros:
       }
     )
 
-  // inline def singleton[T](t: T): BsonDocCodec[T] =
-  //   new SimpleCodec[T, BsonDocument](
-  //     { _ =>
-  //       BsonUtil.empty
-  //     },
-  //     { _ =>
-  //       Success(t)
-  //     }
-  //   )
-
   inline def singleton[T <: Singleton](using
       v: ValueOf[T],
       ev: T =:= v.value.type
@@ -133,7 +123,7 @@ object Macros:
    *    Works for sealed traits / sealed abstract classes.
    *    Requires given codecs for each concrete subtype.
    * ----------------------------------------- */
-  inline def sealedTrait[T](using m: Mirror.SumOf[T]): BsonDocCodec[T] =
+  inline def sum[T](using m: Mirror.SumOf[T]): BsonDocCodec[T] =
     type Alts = m.MirroredElemTypes
     type AltNames = m.MirroredElemLabels
 
