@@ -7,7 +7,7 @@ import mill.api.Task.Simple
 // ========= Common Build Definitions =========
 object Common {
   val organization = "com.github.h-ayat"
-  val version = "0.2.0"
+  val version = "0.2.1"
   val scalaVersion = "3.3.6"
 
   val baseScalacOptions = Seq(

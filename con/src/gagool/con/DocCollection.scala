@@ -1,6 +1,7 @@
 package gagool.con
 
 import com.mongodb.ReadPreference
+import com.mongodb.client.model.IndexOptions
 import com.mongodb.client.model.UpdateOptions
 import com.mongodb.client.result.InsertManyResult
 import com.mongodb.client.result.InsertOneResult
@@ -17,6 +18,7 @@ import org.reactivestreams.Publisher
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.jdk.CollectionConverters.*
+import org.bson.Document
 
 class DocCollection(
     val base: MongoCollection[BsonDocument],
@@ -81,6 +83,29 @@ class DocCollection(
   )(using ExecutionContext): Future[com.mongodb.client.result.DeleteResult] =
     val f: Bson = summon[BsonDocEncoder[F]].encode(filter)
     base.deleteMany(f).toFuture
+
+  def createIndex[K: BsonDocEncoder](
+      keys: K,
+      options: IndexOptions = new IndexOptions()
+  )(using ExecutionContext): Future[String] =
+    val k: Bson = summon[BsonDocEncoder[K]].encode(keys)
+    base.createIndex(k, options).toFuture
+
+  def dropIndex[K: BsonDocEncoder](
+      keys: K
+  )(using ExecutionContext): Future[Unit] =
+    val k: Bson = summon[BsonDocEncoder[K]].encode(keys)
+    base.dropIndex(k).toFuture.map(_ => ())
+
+  def dropIndex(
+      indexName: String
+  )(using ExecutionContext): Future[Unit] =
+    base.dropIndex(indexName).toFuture.map(_ => ())
+
+  def listIndexes()(using ExecutionContext): Future[List[BsonDocument]] =
+    gagool.core.StructHelper
+      .publisherToFutureList(base.listIndexes())
+      .map(_.map(_.toBsonDocument))
 }
 
 case class Finder(

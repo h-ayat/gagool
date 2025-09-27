@@ -27,7 +27,7 @@ private object ParentObject:
 
 private sealed trait Adt
 private object Adt:
-  object SingletonType extends Adt
+  case object SingletonType extends Adt
   final case class CaseClass(a: String) extends Adt
 
 class MacroSpec extends AnyFlatSpec with Matchers:

@@ -9,8 +9,12 @@ import scala.util.{Failure, Success, Try}
 
 object StructHelper:
 
+  extension (pub: Publisher[Void])(using ec: ExecutionContext)
+    def toFuture: Future[Unit] = emptyPublisherToUnitFuture(pub)
+
   extension [T](pub: Publisher[T])(using ec: ExecutionContext)
-    def toFuture: Future[T] = publisherToFutureOption(pub)
+    // def toFuture(using ev: T =:= Void): Future[T] = publisherToFutureOption(pub)
+    def toFuture(using ev: T =:= T): Future[T] = publisherToFutureOption(pub)
 
   val noneFuture: Future[Option[Nothing]] = Future.successful(None)
   private val noneTry: Try[Option[Nothing]] = Success(None)
@@ -43,11 +47,60 @@ object StructHelper:
       pub: Publisher[T]
   )(implicit ec: ExecutionContext): Future[T] = {
     val promise = Promise[T]()
+    var element: Option[T] = None
     pub.subscribe(new Subscriber[T] {
-      override def onSubscribe(s: Subscription): Unit = s.request(1)
-      override def onNext(t: T): Unit = promise.trySuccess(t)
+      private var subscription: Subscription = scala.compiletime.uninitialized
+
+      override def onSubscribe(s: Subscription): Unit =
+        subscription = s
+        s.request(1)
+
+      override def onNext(t: T): Unit =
+        if (element.isEmpty)
+          element = Some(t)
+          subscription.cancel()
+          promise.trySuccess(t)
+
       override def onError(t: Throwable): Unit = promise.tryFailure(t)
-      override def onComplete(): Unit = ()
+      override def onComplete(): Unit =
+        element match
+          case Some(_) => // Already completed
+          case None =>
+            promise.failure(
+              new NoSuchElementException(
+                "Publisher completed without emmitting elements"
+              )
+            )
+    })
+    promise.future
+  }
+
+  def emptyPublisherToUnitFuture(
+      pub: Publisher[Void]
+  )(implicit ec: ExecutionContext): Future[Unit] = {
+    val promise = Promise[Unit]()
+    var element: Option[Unit] = None
+    pub.subscribe(new Subscriber[Void] {
+      private var subscription: Subscription = scala.compiletime.uninitialized
+
+      override def onSubscribe(s: Subscription): Unit =
+        subscription = s
+        s.request(1)
+
+      override def onNext(t: Void): Unit =
+        if (element.isEmpty)
+          element = Some(())
+          subscription.cancel()
+          promise.trySuccess(())
+
+      override def onError(t: Throwable): Unit = promise.tryFailure(t)
+      override def onComplete(): Unit =
+        element match
+          case Some(_) => // Already completed
+          case None =>
+            element = Some(())
+            subscription.cancel()
+            promise.trySuccess(())
     })
     promise.future
   }
