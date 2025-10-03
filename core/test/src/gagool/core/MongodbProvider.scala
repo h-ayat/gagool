@@ -1,4 +1,4 @@
-package gagool.con
+package gagool.core
 
 import de.flapdoodle.embed.mongo.commands.ServerAddress
 import de.flapdoodle.embed.mongo.distribution.Version

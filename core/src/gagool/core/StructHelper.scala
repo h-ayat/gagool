@@ -105,6 +105,7 @@ object StructHelper:
     promise.future
   }
 
+  //  TODO: use max docs
   def publisherToFutureList[T](
       publisher: Publisher[T]
   )(using ec: ExecutionContext): Future[List[T]] = {

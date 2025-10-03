@@ -1,4 +1,4 @@
-package gagool.con
+package gagool.core
 
 import scala.util.{Failure, Success, Try}
 

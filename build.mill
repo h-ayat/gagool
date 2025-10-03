@@ -7,7 +7,7 @@ import mill.api.Task.Simple
 // ========= Common Build Definitions =========
 object Common {
   val organization = "com.github.h-ayat"
-  val version = "0.2.1"
+  val version = "0.2.2"
   val scalaVersion = "3.3.6"
 
   val baseScalacOptions = Seq(
@@ -71,31 +71,18 @@ trait CommonModule extends ScalaModule with PublishModule {
   }
 }
 
-// ========= Module Definitions =========
-
-/** Core module providing MongoDB reactive streams driver integration */
-object core extends CommonModule {
-  val description = "Core Module"
+object bson extends CommonModule {
+  val description = "Basic bson definitions and macros Module"
   def mvnDeps = Seq(
     mvn"org.mongodb:mongodb-driver-reactivestreams:5.5.1"
   )
-}
-
-/** BSON serialization module with dependency on core MongoDB functionality */
-object bson extends CommonModule {
-  val description = "Basic bson definitions and macros Module"
-  def moduleDeps = Seq(core)
 
   object test extends CommonTest
 }
 
-/** Connection module with embedded MongoDB support for testing */
-object con extends CommonModule {
+object core extends CommonModule {
   val description = "Mongodb connection and commands module"
   def moduleDeps = Seq(bson)
-  def mvnDeps = Seq(
-    mvn"de.flapdoodle.embed:de.flapdoodle.embed.mongo:4.21.0"
-  )
 
   object test extends CommonTest {
     override def mvnDeps = super.mvnDeps() ++ Seq(

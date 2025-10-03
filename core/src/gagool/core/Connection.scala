@@ -1,4 +1,4 @@
-package gagool.con
+package gagool.core
 
 import com.mongodb.*
 import com.mongodb.reactivestreams.client.*

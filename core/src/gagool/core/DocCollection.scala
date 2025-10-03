@@ -1,4 +1,4 @@
-package gagool.con
+package gagool.core
 
 import com.mongodb.ReadPreference
 import com.mongodb.client.model.IndexOptions
@@ -9,8 +9,8 @@ import com.mongodb.reactivestreams.client.FindPublisher
 import com.mongodb.reactivestreams.client.MongoCollection
 import gagool.bson.BsonDocDecoder
 import gagool.bson.BsonDocEncoder
-import gagool.core.StructHelper.absolveFutureTries
-import gagool.core.StructHelper.toFuture
+import StructHelper.absolveFutureTries
+import StructHelper.toFuture
 import org.bson.BsonDocument
 import org.bson.conversions.Bson
 import org.reactivestreams.Publisher
@@ -102,8 +102,11 @@ class DocCollection(
   )(using ExecutionContext): Future[Unit] =
     base.dropIndex(indexName).toFuture.map(_ => ())
 
+  def dropCollection()(using ExecutionContext): Future[Unit] =
+    base.drop().toFuture
+
   def listIndexes()(using ExecutionContext): Future[List[BsonDocument]] =
-    gagool.core.StructHelper
+    StructHelper
       .publisherToFutureList(base.listIndexes())
       .map(_.map(_.toBsonDocument))
 }
@@ -116,7 +119,7 @@ case class Finder(
     preference: ReadPreference,
     col: DocCollection
 ) {
-  import gagool.core.StructHelper.{
+  import StructHelper.{
     absolveOptionalTry,
     publisherToFutureList,
     publisherToFutureOption
