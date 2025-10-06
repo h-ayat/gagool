@@ -24,7 +24,8 @@ trait Decoder[+A, -C]:
   def orElse[B >: A](that: => Try[B]): Decoder[B, C] = (in: C) =>
     self.decode(in).orElse(that)
 
-/** Bidirectional codec combining encoder and decoder for type A and representation C.
+/** Bidirectional codec combining encoder and decoder for type A and
+  * representation C.
   */
 trait Codec[A, C] extends Encoder[A, C] with Decoder[A, C] {
   self =>
@@ -51,7 +52,8 @@ object Codec:
       dec = in => decode(in)
     )
 
-  /** Sequence a list of Try values into a Try of list, failing fast on first error.
+  /** Sequence a list of Try values into a Try of list, failing fast on first
+    * error.
     */
   def sequenceT[T](xs: List[Try[T]]): Try[List[T]] =
     xs.foldRight(Success(List.empty[T]): Try[List[T]]) { (h, acc) =>
@@ -65,10 +67,17 @@ object Codec:
       c: BsonValueCodec[O]
   ): BsonValueCodec[A] = c.imap(fromOrigin, toOrigin)
 
-  /** Creates codec from an enum-like structure that has a one to one mapping to
-    * string
+  /** Creates codec from an enum using it's 'values' function
     */
-  /** Creates codec from an enum-like structure that has a one to one mapping to string.
+  def fromEnum[T](values: Array[T]): BsonValueCodec[T] = {
+    val directMap = values.map(t => t.toString -> t).toMap
+    val reverseMap = values.map(t => t -> t.toString).toMap
+    import BaseCodecs.stringCodec
+    imap(directMap.apply)(reverseMap.apply)
+  }
+
+  /** Creates codec from an enum-like structure that has a one to one mapping to
+    * string.
     */
   def fromEnum[T](mapping: Seq[(String, T)]): BsonValueCodec[T] =
     val directMap = mapping.toMap

@@ -248,4 +248,59 @@ class CodecSpec extends AnyFunSpec with Matchers {
       boolCodec.decode(new BsonInt32(1)) shouldBe a[Failure[?]]
     }
   }
+
+  describe("Codec.fromEnum") {
+    enum Color:
+      case Red, Green, Blue
+
+    it("should create codec from enum using values array") {
+      val colorCodec = Codec.fromEnum(Color.values)
+
+      // Test encoding
+      colorCodec.encode(Color.Red) shouldBe new BsonString("Red")
+      colorCodec.encode(Color.Green) shouldBe new BsonString("Green")
+      colorCodec.encode(Color.Blue) shouldBe new BsonString("Blue")
+
+      // Test decoding
+      colorCodec.decode(new BsonString("Red")) shouldBe Success(Color.Red)
+      colorCodec.decode(new BsonString("Green")) shouldBe Success(Color.Green)
+      colorCodec.decode(new BsonString("Blue")) shouldBe Success(Color.Blue)
+
+      // Test decoding invalid value
+      colorCodec.decode(new BsonString("Yellow")) shouldBe a[Failure[?]]
+      colorCodec.decode(new BsonInt32(1)) shouldBe a[Failure[?]]
+    }
+
+    it("should create codec from enum using custom string mapping") {
+      val statusMapping = Seq(
+        "active" -> Color.Green,
+        "error" -> Color.Red,
+        "idle" -> Color.Blue
+      )
+      val statusCodec = Codec.fromEnum(statusMapping)
+
+      // Test encoding with custom mapping
+      statusCodec.encode(Color.Green) shouldBe new BsonString("active")
+      statusCodec.encode(Color.Red) shouldBe new BsonString("error")
+      statusCodec.encode(Color.Blue) shouldBe new BsonString("idle")
+
+      // Test decoding with custom mapping
+      statusCodec.decode(new BsonString("active")) shouldBe Success(Color.Green)
+      statusCodec.decode(new BsonString("error")) shouldBe Success(Color.Red)
+      statusCodec.decode(new BsonString("idle")) shouldBe Success(Color.Blue)
+
+      // Test decoding invalid value
+      statusCodec.decode(new BsonString("Red")) shouldBe a[Failure[?]]
+      statusCodec.decode(new BsonString("unknown")) shouldBe a[Failure[?]]
+    }
+
+    it("should handle roundtrip encoding/decoding for enum values") {
+      val colorCodec = Codec.fromEnum(Color.values)
+
+      Color.values.foreach { color =>
+        val encoded = colorCodec.encode(color)
+        colorCodec.decode(encoded) shouldBe Success(color)
+      }
+    }
+  }
 }
