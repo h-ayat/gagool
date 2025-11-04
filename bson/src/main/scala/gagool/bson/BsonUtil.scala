@@ -48,61 +48,63 @@ object BsonUtil:
   given tupleToElement[T: BsonValueCodec]
       : Conversion[(String, T), BsonElement] =
     case (k, v) => new BsonElement(k, summon[BsonValueCodec[T]].encode(v))
+    
+  def idSel[T: BsonValueCodec](t: T): BsonDocument = doc("_id" -> t)
 
   extension (name: String)
-    def wrapDoc(inner: BsonDocument): BsonDocument =
+    infix def wrapDoc(inner: BsonDocument): BsonDocument =
       new BsonDocument(name, inner)
 
-    def wrap[T: BsonValueCodec](inner: T): BsonDocument =
+    infix def wrap[T: BsonValueCodec](inner: T): BsonDocument =
       doc(name -> inner)
 
-    def between(gte: Int, lt: Int): BsonDocument =
+    infix def between(gte: Int, lt: Int): BsonDocument =
       doc("$gte" -> gte, "$lt" -> lt)
-    def between(gte: Long, lt: Long): BsonDocument =
+    infix def between(gte: Long, lt: Long): BsonDocument =
       doc("$gte" -> gte, "$lt" -> lt)
-    def between(gte: Float, lt: Float): BsonDocument =
+    infix def between(gte: Float, lt: Float): BsonDocument =
       doc("$gte" -> gte, "$lt" -> lt)
-    def between(gte: Double, lt: Double): BsonDocument =
+    infix def between(gte: Double, lt: Double): BsonDocument =
       doc("$gte" -> gte, "$lt" -> lt)
 
-    def op[T: BsonValueCodec](operation: String, value: T): BsonDocument =
+    infix def op[T: BsonValueCodec](operation: String, value: T): BsonDocument =
       doc(name -> doc(operation -> value))
 
-    def lt(value: Int): BsonDocument = op("$lt", value)
-    def lt(value: Long): BsonDocument = op("$lt", value)
-    def lt(value: Float): BsonDocument = op("$lt", value)
-    def lt(value: Double): BsonDocument = op("$lt", value)
+    infix def lt(value: Int): BsonDocument = op("$lt", value)
+    infix def lt(value: Long): BsonDocument = op("$lt", value)
+    infix def lt(value: Float): BsonDocument = op("$lt", value)
+    infix def lt(value: Double): BsonDocument = op("$lt", value)
 
-    def lte(value: Int): BsonDocument = op("$lte", value)
-    def lte(value: Long): BsonDocument = op("$lte", value)
-    def lte(value: Float): BsonDocument = op("$lte", value)
-    def lte(value: Double): BsonDocument = op("$lte", value)
+    infix def lte(value: Int): BsonDocument = op("$lte", value)
+    infix def lte(value: Long): BsonDocument = op("$lte", value)
+    infix def lte(value: Float): BsonDocument = op("$lte", value)
+    infix def lte(value: Double): BsonDocument = op("$lte", value)
 
-    def gt(value: Int): BsonDocument = op("$gt", value)
-    def gt(value: Long): BsonDocument = op("$gt", value)
-    def gt(value: Float): BsonDocument = op("$gt", value)
-    def gt(value: Double): BsonDocument = op("$gt", value)
+    infix def gt(value: Int): BsonDocument = op("$gt", value)
+    infix def gt(value: Long): BsonDocument = op("$gt", value)
+    infix def gt(value: Float): BsonDocument = op("$gt", value)
+    infix def gt(value: Double): BsonDocument = op("$gt", value)
 
-    def gte(value: Int): BsonDocument = op("$gte", value)
-    def gte(value: Long): BsonDocument = op("$gte", value)
-    def gte(value: Float): BsonDocument = op("$gte", value)
-    def gte(value: Double): BsonDocument = op("$gte", value)
+    infix def gte(value: Int): BsonDocument = op("$gte", value)
+    infix def gte(value: Long): BsonDocument = op("$gte", value)
+    infix def gte(value: Float): BsonDocument = op("$gte", value)
+    infix def gte(value: Double): BsonDocument = op("$gte", value)
 
-    def is[T: BsonValueCodec](t: T): BsonDocument = doc(name -> t)
-    def isNot[T: BsonValueCodec](t: T): BsonDocument = op("$ne", t)
+    infix def is[T: BsonValueCodec](t: T): BsonDocument = doc(name -> t)
+    infix def isNot[T: BsonValueCodec](t: T): BsonDocument = op("$ne", t)
 
-    def in[T: BsonValueCodec](ts: Seq[T]): BsonDocument = op("$in", ts.toList)
-    def in[T: BsonValueCodec](ts: Set[T]): BsonDocument = op("$in", ts)
-    def in[T: BsonValueCodec](ts: List[T]): BsonDocument = op("$in", ts)
+    infix def in[T: BsonValueCodec](ts: Seq[T]): BsonDocument = op("$in", ts.toList)
+    infix def in[T: BsonValueCodec](ts: Set[T]): BsonDocument = op("$in", ts)
+    infix def in[T: BsonValueCodec](ts: List[T]): BsonDocument = op("$in", ts)
 
-    def nin[T: BsonValueCodec](ts: Seq[T]): BsonDocument = op("$nin", ts.toList)
-    def nin[T: BsonValueCodec](ts: Set[T]): BsonDocument = op("$nin", ts)
-    def nin[T: BsonValueCodec](ts: List[T]): BsonDocument = op("$nin", ts)
+    infix def nin[T: BsonValueCodec](ts: Seq[T]): BsonDocument = op("$nin", ts.toList)
+    infix def nin[T: BsonValueCodec](ts: Set[T]): BsonDocument = op("$nin", ts)
+    infix def nin[T: BsonValueCodec](ts: List[T]): BsonDocument = op("$nin", ts)
 
-    def include: BsonDocument = is(true)
+    infix def include: BsonDocument = is(true)
 
-    def isNotPresent: BsonDocument = op("$exists", false)
-    def isPresent: BsonDocument = op("$exists", true)
+    infix def isNotPresent: BsonDocument = op("$exists", false)
+    infix def isPresent: BsonDocument = op("$exists", true)
 
   /** Validation utilities for common MongoDB patterns.
     */
