@@ -1,7 +1,7 @@
 package gagool.core
 
+import cats.effect.IO
 import com.mongodb.ReadPreference
-import org.scalatest.BeforeAndAfterEach
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -15,7 +15,7 @@ class ConnectionTest extends AnyFlatSpec with Matchers with MongodbProvider {
 
   "Connection" should "create a connection with default read preference" in {
     val config = createConnectionConfig()
-    val connection = new Connection(config)
+    val connection = new Connection[IO](config)
 
     connection.client should not be null
     connection.db should not be null
@@ -25,7 +25,7 @@ class ConnectionTest extends AnyFlatSpec with Matchers with MongodbProvider {
   it should "create a connection with custom read preference" in {
     val config = createConnectionConfig()
     val readPreference = ReadPreference.secondary()
-    val connection = new Connection(config, readPreference)
+    val connection = new Connection[IO](config, readPreference)
 
     connection.client should not be null
     connection.db should not be null
@@ -34,7 +34,7 @@ class ConnectionTest extends AnyFlatSpec with Matchers with MongodbProvider {
 
   it should "create a collection with the specified name" in {
     val config = createConnectionConfig()
-    val connection = new Connection(config)
+    val connection = new Connection[IO](config)
     val collectionName = "test_collection"
 
     val collection = connection.collection(collectionName)
@@ -43,7 +43,7 @@ class ConnectionTest extends AnyFlatSpec with Matchers with MongodbProvider {
 
   it should "create multiple collections with different names" in {
     val config = createConnectionConfig()
-    val connection = new Connection(config)
+    val connection = new Connection[IO](config)
 
     val collection1 = connection.collection("collection1")
     val collection2 = connection.collection("collection2")
@@ -56,8 +56,8 @@ class ConnectionTest extends AnyFlatSpec with Matchers with MongodbProvider {
     val config1 = ConnectionConfig(s"mongodb://localhost:$port", "db1")
     val config2 = ConnectionConfig(s"mongodb://localhost:$port", "db2")
 
-    val connection1 = new Connection(config1)
-    val connection2 = new Connection(config2)
+    val connection1 = new Connection[IO](config1)
+    val connection2 = new Connection[IO](config2)
 
     connection1.db.getName shouldBe "db1"
     connection2.db.getName shouldBe "db2"
@@ -65,7 +65,7 @@ class ConnectionTest extends AnyFlatSpec with Matchers with MongodbProvider {
 
   it should "maintain the same client instance across multiple collection creations" in {
     val config = createConnectionConfig()
-    val connection = new Connection(config)
+    val connection = new Connection[IO](config)
 
     val client1 = connection.client
     val collection = connection.collection("test")
@@ -76,9 +76,8 @@ class ConnectionTest extends AnyFlatSpec with Matchers with MongodbProvider {
 
   it should "use primary read preference by default" in {
     val config = createConnectionConfig()
-    val connection = new Connection(config)
+    val connection = new Connection[IO](config)
 
-    // The read preference is set internally; we can verify the connection works
     connection.client should not be null
     connection.db should not be null
   }
@@ -86,7 +85,7 @@ class ConnectionTest extends AnyFlatSpec with Matchers with MongodbProvider {
   it should "accept and use custom read preferences" in {
     val config = createConnectionConfig()
     val secondaryPreferred = ReadPreference.secondaryPreferred()
-    val connection = new Connection(config, secondaryPreferred)
+    val connection = new Connection[IO](config, secondaryPreferred)
 
     connection.client should not be null
     connection.db should not be null
@@ -108,7 +107,7 @@ class ConnectionTest extends AnyFlatSpec with Matchers with MongodbProvider {
     )
 
     configs.foreach { config =>
-      val connection = new Connection(config)
+      val connection = new Connection[IO](config)
       connection.client should not be null
       connection.db.getName shouldBe config.dbName
     }

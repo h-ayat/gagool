@@ -1,7 +1,7 @@
 // Root build.sbt - Common Settings and Inter-Module Wiring
 
 ThisBuild / organization := "com.github.h-ayat"
-ThisBuild / version := "0.2.5"
+ThisBuild / version := "0.3.0"
 ThisBuild / scalaVersion := "3.3.6"
 ThisBuild / semanticdbEnabled := true
 
@@ -37,8 +37,6 @@ ThisBuild / scalacOptions := {
 // Common test settings
 ThisBuild / Test / fork := true
 ThisBuild / Test / javaOptions ++= Seq("-Xmx2G", "-Xss4M")
-
-
 
 lazy val bson = (project in file("bson"))
 lazy val core = (project in file("core")).dependsOn(bson)

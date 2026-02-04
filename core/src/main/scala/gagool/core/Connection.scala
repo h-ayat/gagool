@@ -3,10 +3,11 @@ package gagool.core
 import com.mongodb.*
 import com.mongodb.reactivestreams.client.*
 import org.bson.BsonDocument
+import cats.effect.Async
 
 case class ConnectionConfig(uriString: String, dbName: String)
 
-class Connection(
+class Connection[E[_]: Async](
     config: ConnectionConfig,
     readPreference: ReadPreference = ReadPreference.primary()
 ) {
@@ -28,4 +29,15 @@ class Connection(
       db.getCollection[BsonDocument](name, classOf[BsonDocument]),
       readPreference
     )
+}
+
+object Tester {
+  import cats.effect.Async
+  import org.reactivestreams.Publisher
+  import fs2.interop.reactivestreams.fromPublisher
+
+  def fromPublisher[F[_]: Async, A](pub: Publisher[A]): F[List[A]] =
+    val o = fromPublisher[F, A](pub)
+    o
+
 }

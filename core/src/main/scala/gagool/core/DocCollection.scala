@@ -1,5 +1,9 @@
 package gagool.core
 
+import fs2.Stream
+import fs2.interop.reactivestreams.*
+import cats.effect.Async
+
 import com.mongodb.ReadPreference
 import com.mongodb.client.model.IndexOptions
 import com.mongodb.client.model.UpdateOptions
@@ -9,18 +13,15 @@ import com.mongodb.reactivestreams.client.FindPublisher
 import com.mongodb.reactivestreams.client.MongoCollection
 import gagool.bson.BsonDocDecoder
 import gagool.bson.BsonDocEncoder
-import StructHelper.absolveFutureTries
-import StructHelper.toFuture
 import org.bson.BsonDocument
 import org.bson.conversions.Bson
-import org.reactivestreams.Publisher
 
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
 import scala.jdk.CollectionConverters.*
-import org.bson.Document
+import fs2.interop.reactivestreams.fromPublisher
+import cats.ApplicativeThrow
+import scala.util.Try
 
-class DocCollection(
+class DocCollection[E[_]: Async](
     val base: MongoCollection[BsonDocument],
     readPreference: ReadPreference
 ) {
@@ -29,132 +30,140 @@ class DocCollection(
       filter: F,
       projection: Option[P] = None,
       order: Option[O] = None,
-      skip: Option[Int] = None
-  ): Finder = {
+      options: FinderOptions = FinderOptions.default
+  ): Finder[E] = {
     Finder(
       summon[BsonDocEncoder[F]].encode(filter),
       projection.map(summon[BsonDocEncoder[P]].encode),
       order.map(summon[BsonDocEncoder[O]].encode),
-      skip,
-      readPreference,
+      options,
       this
     )
   }
 
-  def insert[T: BsonDocEncoder](
-      doc: T
-  )(using ExecutionContext): Future[InsertOneResult] =
-    base.insertOne(summon[BsonDocEncoder[T]].encode(doc)).toFuture
+  def insert[T: BsonDocEncoder](doc: T): E[InsertOneResult] =
+    fromPublisher(
+      base.insertOne(summon[BsonDocEncoder[T]].encode(doc)),
+      1
+    ).compile.lastOrError
 
-  def insertAll[T: BsonDocEncoder](
-      docs: List[T]
-  )(using ExecutionContext): Future[InsertManyResult] =
+  def insertAll[T: BsonDocEncoder](docs: List[T]): E[InsertManyResult] =
     val bsonDocs = docs.map(summon[BsonDocEncoder[T]].encode).asJava
-    base.insertMany(bsonDocs).toFuture
+    fromPublisher(base.insertMany(bsonDocs), 1).compile.lastOrError
 
   def updateOne[F: BsonDocEncoder, U: BsonDocEncoder](
       filter: F,
       update: U,
       upsert: Boolean = false
-  )(using ExecutionContext): Future[com.mongodb.client.result.UpdateResult] =
-    val options = new UpdateOptions().upsert(upsert)
+  ): E[com.mongodb.client.result.UpdateResult] =
+    val opts = new UpdateOptions().upsert(upsert)
     val f: Bson = summon[BsonDocEncoder[F]].encode(filter)
     val u: Bson = summon[BsonDocEncoder[U]].encode(update)
-    base.updateOne(f, u, options).toFuture
+    fromPublisher(base.updateOne(f, u, opts), 1).compile.lastOrError
 
   def updateMany[F: BsonDocEncoder, U: BsonDocEncoder](
       filter: F,
       update: U,
       upsert: Boolean = false
-  )(using ExecutionContext): Future[com.mongodb.client.result.UpdateResult] =
-    val options = new UpdateOptions().upsert(upsert)
+  ): E[com.mongodb.client.result.UpdateResult] =
+    val opts = new UpdateOptions().upsert(upsert)
     val f: Bson = summon[BsonDocEncoder[F]].encode(filter)
     val u: Bson = summon[BsonDocEncoder[U]].encode(update)
-    base.updateMany(f, u, options).toFuture
+    fromPublisher(base.updateMany(f, u, opts), 1).compile.lastOrError
 
   def deleteOne[F: BsonDocEncoder](
       filter: F
-  )(using ExecutionContext): Future[com.mongodb.client.result.DeleteResult] =
+  ): E[com.mongodb.client.result.DeleteResult] =
     val f: Bson = summon[BsonDocEncoder[F]].encode(filter)
-    base.deleteOne(f).toFuture
+    fromPublisher(base.deleteOne(f), 1).compile.lastOrError
 
   def deleteMany[F: BsonDocEncoder](
       filter: F
-  )(using ExecutionContext): Future[com.mongodb.client.result.DeleteResult] =
+  ): E[com.mongodb.client.result.DeleteResult] =
     val f: Bson = summon[BsonDocEncoder[F]].encode(filter)
-    base.deleteMany(f).toFuture
+    fromPublisher(base.deleteMany(f), 1).compile.lastOrError
 
   def createIndex[K: BsonDocEncoder](
       keys: K,
       options: IndexOptions = new IndexOptions()
-  )(using ExecutionContext): Future[String] =
+  ): E[String] =
     val k: Bson = summon[BsonDocEncoder[K]].encode(keys)
-    base.createIndex(k, options).toFuture
+    fromPublisher(base.createIndex(k, options), 1).compile.lastOrError
 
-  def dropIndex[K: BsonDocEncoder](
-      keys: K
-  )(using ExecutionContext): Future[Unit] =
+  def dropIndex[K: BsonDocEncoder](keys: K): E[Unit] =
     val k: Bson = summon[BsonDocEncoder[K]].encode(keys)
-    base.dropIndex(k).toFuture.map(_ => ())
+    fromPublisher(base.dropIndex(k), 1).compile.drain
 
-  def dropIndex(
-      indexName: String
-  )(using ExecutionContext): Future[Unit] =
-    base.dropIndex(indexName).toFuture.map(_ => ())
+  def dropIndex(indexName: String): E[Unit] =
+    fromPublisher(base.dropIndex(indexName), 1).compile.drain
 
-  def dropCollection()(using ExecutionContext): Future[Unit] =
-    base.drop().toFuture
+  def dropCollection(): E[Unit] =
+    fromPublisher(base.drop(), 1).compile.drain
 
-  def listIndexes()(using ExecutionContext): Future[List[BsonDocument]] =
-    StructHelper
-      .publisherToFutureList(base.listIndexes())
-      .map(_.map(_.toBsonDocument))
+  def listIndexes(): E[List[BsonDocument]] =
+    fromPublisher(base.listIndexes(), 256)
+      .map(_.toBsonDocument)
+      .compile
+      .toList
 }
 
-case class Finder(
+case class FinderOptions(
+    skip: Option[Int],
+    readPreference: Option[ReadPreference],
+    bufferSize: Int = 256
+)
+
+object FinderOptions {
+  val default = FinderOptions(None, None)
+}
+
+case class Finder[E[_]: Async](
     filter: BsonDocument,
     projection: Option[BsonDocument],
     order: Option[BsonDocument],
-    skip: Option[Int],
-    preference: ReadPreference,
-    col: DocCollection
+    options: FinderOptions,
+    col: DocCollection[E]
 ) {
-  import StructHelper.{
-    absolveOptionalTry,
-    publisherToFutureList,
-    publisherToFutureOption
-  }
 
   private lazy val builder: FindPublisher[BsonDocument] =
-    val finder = col.base.find(filter)
+    val base = options.readPreference match
+      case Some(value) => col.base.withReadPreference(value)
+      case None        => col.base
+    val finder = base.find(filter)
     projection.foreach(finder.projection)
     order.foreach(finder.sort)
-    skip.foreach(finder.skip)
+    options.skip.foreach(finder.skip)
     finder
 
-  def readPreference(preference: ReadPreference): Finder =
-    this.copy(preference = preference)
-
   def one[T](using
-      reader: BsonDocDecoder[T],
-      ec: ExecutionContext
-  ): Future[Option[T]] =
-    absolveOptionalTry(
-      publisherToFutureOption(
-        builder.limit(1).first()
+      reader: BsonDocDecoder[T]
+  ): E[Option[T]] =
+    StreamUtil
+      .unwrap(
+        fromPublisher(builder.limit(1).first(), 1)
+          .map(reader.decode)
       )
-        .map(Option.apply)
-        .map(_.map(reader.decode))
-    )
+      .compile
+      .last
 
   def list[T](
-      limit: Int = -1
-  )(using reader: BsonDocDecoder[T], ec: ExecutionContext): Future[List[T]] =
-    absolveFutureTries(
-      publisherToFutureList(
-        if limit > 0 then builder.limit(limit) else builder
-      ).map(_.map(reader.decode))
-    )
+      limit: Option[Int] = None
+  )(using reader: BsonDocDecoder[T]) = {
+    StreamUtil
+      .unwrap(
+        fromPublisher(
+          limit.map(builder.limit).getOrElse(builder),
+          options.bufferSize
+        )
+          .map(reader.decode)
+      )
+      .compile
+      .toList
+  }
 
-  def source[T: BsonDocDecoder](): Publisher[BsonDocument] = builder
+  def source[T: BsonDocDecoder](): Stream[E, T] =
+    StreamUtil.unwrap(
+      fromPublisher(builder, options.bufferSize)
+        .map(summon[BsonDocDecoder[T]].decode)
+    )
 }
