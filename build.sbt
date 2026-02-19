@@ -2,7 +2,7 @@
 
 ThisBuild / organization := "com.github.h-ayat"
 ThisBuild / version := "0.3.0"
-ThisBuild / scalaVersion := "3.3.6"
+ThisBuild / scalaVersion := "3.3.7"
 ThisBuild / semanticdbEnabled := true
 
 // Common scalac options
@@ -15,7 +15,7 @@ val baseScalacOptions = Seq(
   "-language:strictEquality",
   "-language:implicitConversions",
   "-Ykind-projector:underscores",
-  "-release:17"
+  "-release:21"
 )
 
 val ciScalacOptions = Seq(
