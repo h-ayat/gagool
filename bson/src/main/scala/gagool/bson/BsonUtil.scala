@@ -48,7 +48,7 @@ object BsonUtil:
   given tupleToElement[T: BsonValueCodec]
       : Conversion[(String, T), BsonElement] =
     case (k, v) => new BsonElement(k, summon[BsonValueCodec[T]].encode(v))
-    
+
   def idSel[T: BsonValueCodec](t: T): BsonDocument = doc("_id" -> t)
 
   extension (name: String)
@@ -93,11 +93,13 @@ object BsonUtil:
     infix def is[T: BsonValueCodec](t: T): BsonDocument = doc(name -> t)
     infix def isNot[T: BsonValueCodec](t: T): BsonDocument = op("$ne", t)
 
-    infix def in[T: BsonValueCodec](ts: Seq[T]): BsonDocument = op("$in", ts.toList)
+    infix def in[T: BsonValueCodec](ts: Seq[T]): BsonDocument =
+      op("$in", ts.toList)
     infix def in[T: BsonValueCodec](ts: Set[T]): BsonDocument = op("$in", ts)
     infix def in[T: BsonValueCodec](ts: List[T]): BsonDocument = op("$in", ts)
 
-    infix def nin[T: BsonValueCodec](ts: Seq[T]): BsonDocument = op("$nin", ts.toList)
+    infix def nin[T: BsonValueCodec](ts: Seq[T]): BsonDocument =
+      op("$nin", ts.toList)
     infix def nin[T: BsonValueCodec](ts: Set[T]): BsonDocument = op("$nin", ts)
     infix def nin[T: BsonValueCodec](ts: List[T]): BsonDocument = op("$nin", ts)
 
@@ -121,7 +123,7 @@ object BsonUtil:
     /** Validate collection name (no spaces, slashes, or special chars). */
     def isValidCollectionName(name: String): Boolean =
       name.nonEmpty &&
-      !name.contains(" ") &&
-      !name.contains("/") &&
-      !name.contains("\\") &&
-      !name.startsWith("system.")
+        !name.contains(" ") &&
+        !name.contains("/") &&
+        !name.contains("\\") &&
+        !name.startsWith("system.")

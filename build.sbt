@@ -2,19 +2,21 @@
 
 ThisBuild / organization := "com.github.h-ayat"
 ThisBuild / version := "0.3.0"
-ThisBuild / scalaVersion := "3.3.7"
-ThisBuild / semanticdbEnabled := true
+ThisBuild / scalaVersion := "3.8.3"
 
 // Common scalac options
 val isCI = sys.env.get("CI").contains("true")
 
 val baseScalacOptions = Seq(
-  "-deprecation",
-  "-feature",
-  "-unchecked",
-  "-language:strictEquality",
-  "-language:implicitConversions",
-  "-Ykind-projector:underscores",
+  // "-Wvalue-discard",
+  // "-Wnonunit-statement",
+  // "-Wconf:msg=(unused.*value|discarded.*value|pure.*statement):error",
+  // "-deprecation",
+  // "-feature",
+  // "-unchecked",
+  // "-language:strictEquality",
+  // "-language:implicitConversions",
+//  "-Ykind-projector:underscores",
   "-release:21"
 )
 

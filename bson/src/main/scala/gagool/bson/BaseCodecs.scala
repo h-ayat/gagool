@@ -18,7 +18,7 @@ import scala.util.{Failure, Success, Try}
 /** Built-in codecs for primitive types and collections.
   */
 object BaseCodecs:
-  given bsonDocCodec: BsonDocCodec[BsonDocument] with
+  given bsonDocCodec: BsonDocCodec[BsonDocument]:
     def encode(s: BsonDocument): BsonDocument = s
     def decode(in: BsonDocument): Try[BsonDocument] = Success(in)
 
@@ -42,14 +42,16 @@ object BaseCodecs:
             )
           )
 
-  given bsonValueCodec: BsonValueCodec[BsonValue] with
+
+
+  given bsonValueCodec: BsonValueCodec[BsonValue]:
     def encode(s: BsonValue): BsonValue = s
 
     def decode(in: BsonValue): Try[BsonValue] = Success(in)
 
   /** Codec for String values, encoding to BsonString.
     */
-  given stringCodec: BsonValueCodec[String] with
+  given stringCodec: BsonValueCodec[String]:
     def encode(s: String): BsonValue = new BsonString(s)
 
     def decode(in: BsonValue): Try[String] = in match
@@ -64,7 +66,7 @@ object BaseCodecs:
 
   /** Codec for Int values with flexible numeric decoding.
     */
-  given intCodec: BsonValueCodec[Int] with
+  given intCodec: BsonValueCodec[Int]:
     def encode(i: Int): BsonValue = new BsonInt32(i)
 
     def decode(in: BsonValue): Try[Int] = in match
@@ -80,7 +82,7 @@ object BaseCodecs:
 
   /** Codec for Float values with flexible numeric decoding.
     */
-  given floatCodec: BsonValueCodec[Float] with
+  given floatCodec: BsonValueCodec[Float]:
     def encode(i: Float): BsonValue = new BsonDouble(i)
 
     def decode(in: BsonValue): Try[Float] = in match
@@ -96,7 +98,7 @@ object BaseCodecs:
 
   /** Codec for Double values with flexible numeric decoding.
     */
-  given doubleCodec: BsonValueCodec[Double] with
+  given doubleCodec: BsonValueCodec[Double]:
     def encode(i: Double): BsonValue = new BsonDouble(i)
 
     def decode(in: BsonValue): Try[Double] = in match
@@ -112,7 +114,7 @@ object BaseCodecs:
 
   /** Codec for Long values with flexible numeric decoding.
     */
-  given longCodec: BsonValueCodec[Long] with
+  given longCodec: BsonValueCodec[Long]:
     def encode(l: Long): BsonValue = new BsonInt64(l)
 
     def decode(in: BsonValue): Try[Long] = in match
@@ -128,7 +130,7 @@ object BaseCodecs:
 
   /** Codec for Boolean values.
     */
-  given boolCodec: BsonValueCodec[Boolean] with
+  given boolCodec: BsonValueCodec[Boolean]:
     def encode(b: Boolean): BsonValue = new BsonBoolean(b)
 
     def decode(in: BsonValue): Try[Boolean] = in match
@@ -160,8 +162,7 @@ object BaseCodecs:
 
   /** Codec for Option[A] where None encodes to BsonNull.
     */
-  given optionCodec[A](using c: BsonValueCodec[A]): BsonValueCodec[Option[A]]
-  with
+  given optionCodec[A](using c: BsonValueCodec[A]): BsonValueCodec[Option[A]] with
     def encode(opt: Option[A]): BsonValue = opt match
       case Some(v) => c.encode(v)
       case None    => BsonNull.VALUE
