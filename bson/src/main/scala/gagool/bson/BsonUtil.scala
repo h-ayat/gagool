@@ -45,9 +45,8 @@ object BsonUtil:
   given tupleToElement: Conversion[(String, BsonDocument), BsonElement] =
     case (k, v) => new BsonElement(k, v)
 
-  given tupleToElement[T: BsonValueCodec]
-      : Conversion[(String, T), BsonElement] =
-    case (k, v) => new BsonElement(k, summon[BsonValueCodec[T]].encode(v))
+  given tupleToElement: [T] => (codec: BsonValueCodec[T]) => Conversion[(String, T), BsonElement] =
+    case (k, v) => new BsonElement(k, codec.encode(v))
 
   def idSel[T: BsonValueCodec](t: T): BsonDocument = doc("_id" -> t)
 

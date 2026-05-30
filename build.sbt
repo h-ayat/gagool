@@ -8,15 +8,16 @@ ThisBuild / scalaVersion := "3.8.3"
 val isCI = sys.env.get("CI").contains("true")
 
 val baseScalacOptions = Seq(
-  // "-Wvalue-discard",
-  // "-Wnonunit-statement",
-  // "-Wconf:msg=(unused.*value|discarded.*value|pure.*statement):error",
-  // "-deprecation",
-  // "-feature",
-  // "-unchecked",
-  // "-language:strictEquality",
-  // "-language:implicitConversions",
-//  "-Ykind-projector:underscores",
+  "-Wvalue-discard",
+  "-Wnonunit-statement",
+  "-Wconf:msg=(unused.*value|discarded.*value|pure.*statement):error",
+  "-deprecation",
+  "-feature",
+  "-unchecked",
+  "-language:strictEquality",
+  "-language:implicitConversions",
+  "-Xkind-projector",
+  "-source:future",
   "-release:21"
 )
 
@@ -27,8 +28,7 @@ val ciScalacOptions = Seq(
 
 val devScalacOptions = Seq(
   "-explain",
-  "-explain-types",
-  "-source:future"
+  "-explain-types"
 )
 
 ThisBuild / scalacOptions := {

@@ -17,9 +17,9 @@ class ConnectionTest extends AnyFlatSpec with Matchers with MongodbProvider {
     val config = createConnectionConfig()
     val connection = new Connection[IO](config)
 
-    connection.client should not be null
-    connection.db should not be null
-    connection.db.getName shouldBe dbName
+    val _ = connection.client should not be null
+    val _ = connection.db should not be null
+    val _ = connection.db.getName shouldBe dbName
   }
 
   it should "create a connection with custom read preference" in {
@@ -27,9 +27,9 @@ class ConnectionTest extends AnyFlatSpec with Matchers with MongodbProvider {
     val readPreference = ReadPreference.secondary()
     val connection = new Connection[IO](config, readPreference)
 
-    connection.client should not be null
-    connection.db should not be null
-    connection.db.getName shouldBe dbName
+    val _ = connection.client should not be null
+    val _ = connection.db should not be null
+    val _ = connection.db.getName shouldBe dbName
   }
 
   it should "create a collection with the specified name" in {
@@ -48,8 +48,8 @@ class ConnectionTest extends AnyFlatSpec with Matchers with MongodbProvider {
     val collection1 = connection.collection("collection1")
     val collection2 = connection.collection("collection2")
 
-    collection1 should not be null
-    collection2 should not be null
+    val _ = collection1 should not be null
+    val _ = collection2 should not be null
   }
 
   it should "handle connection with different database names" in {
@@ -59,8 +59,8 @@ class ConnectionTest extends AnyFlatSpec with Matchers with MongodbProvider {
     val connection1 = new Connection[IO](config1)
     val connection2 = new Connection[IO](config2)
 
-    connection1.db.getName shouldBe "db1"
-    connection2.db.getName shouldBe "db2"
+    val _ = connection1.db.getName shouldBe "db1"
+    val _ = connection2.db.getName shouldBe "db2"
   }
 
   it should "maintain the same client instance across multiple collection creations" in {
@@ -78,8 +78,8 @@ class ConnectionTest extends AnyFlatSpec with Matchers with MongodbProvider {
     val config = createConnectionConfig()
     val connection = new Connection[IO](config)
 
-    connection.client should not be null
-    connection.db should not be null
+    val _ = connection.client should not be null
+    val _ = connection.db should not be null
   }
 
   it should "accept and use custom read preferences" in {
@@ -87,16 +87,16 @@ class ConnectionTest extends AnyFlatSpec with Matchers with MongodbProvider {
     val secondaryPreferred = ReadPreference.secondaryPreferred()
     val connection = new Connection[IO](config, secondaryPreferred)
 
-    connection.client should not be null
-    connection.db should not be null
+    val _ = connection.client should not be null
+    val _ = connection.db should not be null
   }
 
   "ConnectionConfig" should "create with valid URI and database name" in {
     val uriString = s"mongodb://localhost:$port"
 
     val config = ConnectionConfig(uriString, dbName)
-    config.uriString shouldBe uriString
-    config.dbName shouldBe dbName
+    val _ = config.uriString shouldBe uriString
+    val _ = config.dbName shouldBe dbName
   }
 
   it should "work with different URI formats" in {
@@ -108,8 +108,8 @@ class ConnectionTest extends AnyFlatSpec with Matchers with MongodbProvider {
 
     configs.foreach { config =>
       val connection = new Connection[IO](config)
-      connection.client should not be null
-      connection.db.getName shouldBe config.dbName
+      val _ = connection.client should not be null
+      val _ = connection.db.getName shouldBe config.dbName
     }
   }
 }

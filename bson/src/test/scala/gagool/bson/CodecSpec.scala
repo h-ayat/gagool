@@ -40,12 +40,12 @@ class CodecSpec extends AnyFunSpec with Matchers {
       val dog = Dog("Buddy")
       val encodedDog =
         animalNameEncoder.encode(dog) // This should compile and work
-      encodedDog shouldBe new BsonString("Dog: Buddy")
+      val _ = encodedDog shouldBe new BsonString("Dog: Buddy")
 
       // Thanks to contravariance, an Encoder[Animal, BsonValue] can also be assigned to a variable of type Encoder[Dog, BsonValue] directly
       val dogEncoderFromAnimalDirect: Encoder[Dog, BsonValue] =
         animalNameEncoder
-      dogEncoderFromAnimalDirect.encode(dog) shouldBe new BsonString(
+      val _ = dogEncoderFromAnimalDirect.encode(dog) shouldBe new BsonString(
         "Dog: Buddy"
       )
 
@@ -67,8 +67,9 @@ class CodecSpec extends AnyFunSpec with Matchers {
   describe("Decoder") {
     it("should decode a value correctly") {
       val stringDecoder: BsonValueDecoder[String] = BaseCodecs.stringCodec
-      stringDecoder.decode(new BsonString("hello")) shouldBe Success("hello")
-      stringDecoder.decode(new BsonInt32(123)) shouldBe a[Failure[?]]
+      val _ =
+        stringDecoder.decode(new BsonString("hello")) shouldBe Success("hello")
+      val _ = stringDecoder.decode(new BsonInt32(123)) shouldBe a[Failure[?]]
     }
 
     it("should support map for output type transformation") {
@@ -81,10 +82,10 @@ class CodecSpec extends AnyFunSpec with Matchers {
     it("should support flatMap for monadic composition") {
       val intDecoder: BsonValueDecoder[Int] = BaseCodecs.intCodec
       val positiveIntDecoder: BsonValueDecoder[Int] = intDecoder.flatMap { i =>
-        if (i > 0) Success(i)
+        if i > 0 then Success(i)
         else Failure(new IllegalArgumentException("Negative int"))
       }
-      positiveIntDecoder.decode(new BsonInt32(5)) shouldBe Success(5)
+      val _ = positiveIntDecoder.decode(new BsonInt32(5)) shouldBe Success(5)
       positiveIntDecoder.decode(new BsonInt32(-5)) shouldBe a[Failure[?]]
     }
 
@@ -92,7 +93,7 @@ class CodecSpec extends AnyFunSpec with Matchers {
       val intDecoder: BsonValueDecoder[Int] = BaseCodecs.intCodec
       val fallbackDecoder: BsonValueDecoder[Int] = intDecoder.orElse(Success(0))
 
-      fallbackDecoder.decode(new BsonInt32(5)) shouldBe Success(5)
+      val _ = fallbackDecoder.decode(new BsonInt32(5)) shouldBe Success(5)
       fallbackDecoder.decode(new BsonString("not an int")) shouldBe Success(
         0
       ) // Fallback activated
@@ -108,9 +109,10 @@ class CodecSpec extends AnyFunSpec with Matchers {
 
       val animalDecoder: Decoder[Animal, BsonValue] =
         dogDecoder // Covariance in A allows this direct assignment
-      animalDecoder.decode(new BsonString("Dog: Fido")) shouldBe Success(
-        Dog("Fido")
-      )
+      val _ =
+        animalDecoder.decode(new BsonString("Dog: Fido")) shouldBe Success(
+          Dog("Fido")
+        )
       animalDecoder
         .decode(new BsonString("Cat: Whiskers")) shouldBe a[Failure[?]]
     }
@@ -118,10 +120,12 @@ class CodecSpec extends AnyFunSpec with Matchers {
     it("should support contravariance for input type") {
 
       val stringBsonValueDecoder = BaseCodecs.stringCodec
-      stringBsonValueDecoder.decode(new BsonString("test")) shouldBe Success(
-        "test"
-      )
-      stringBsonValueDecoder.decode(new BsonInt32(1)) shouldBe a[Failure[?]]
+      val _ =
+        stringBsonValueDecoder.decode(new BsonString("test")) shouldBe Success(
+          "test"
+        )
+      val _ =
+        stringBsonValueDecoder.decode(new BsonInt32(1)) shouldBe a[Failure[?]]
     }
   }
 
@@ -135,8 +139,8 @@ class CodecSpec extends AnyFunSpec with Matchers {
         }
       )
 
-      customCodec.encode(5) shouldBe new BsonInt32(10)
-      customCodec.decode(new BsonInt32(10)) shouldBe Success(5)
+      val _ = customCodec.encode(5) shouldBe new BsonInt32(10)
+      val _ = customCodec.decode(new BsonInt32(10)) shouldBe Success(5)
     }
 
     it("should support imap for bidirectional transformation") {
@@ -150,10 +154,12 @@ class CodecSpec extends AnyFunSpec with Matchers {
       )
 
       val wrapper = MyStringWrapper("WrappedText")
-      wrapperCodec.encode(wrapper) shouldBe new BsonString("WrappedText")
-      wrapperCodec.decode(new BsonString("DecodedText")) shouldBe Success(
-        MyStringWrapper("DecodedText")
-      )
+      val _ =
+        wrapperCodec.encode(wrapper) shouldBe new BsonString("WrappedText")
+      val _ =
+        wrapperCodec.decode(new BsonString("DecodedText")) shouldBe Success(
+          MyStringWrapper("DecodedText")
+        )
     }
   }
 
@@ -162,28 +168,29 @@ class CodecSpec extends AnyFunSpec with Matchers {
       val setStringCodec = BaseCodecs.setCodec[String]
       val originalSet = Set("a", "b", "c")
       val encoded = setStringCodec.encode(originalSet).asInstanceOf[BsonArray]
-      encoded.getValues.asScala
+      val _ = encoded.getValues.asScala
         .map(_.asString().getValue)
         .toSet shouldBe originalSet
-      setStringCodec.decode(encoded) shouldBe Success(originalSet)
+      val _ = setStringCodec.decode(encoded) shouldBe Success(originalSet)
     }
 
     it("should encode and decode Option correctly") {
       val optionIntCodec = BaseCodecs.optionCodec[Int]
-      optionIntCodec.encode(Some(123)) shouldBe new BsonInt32(123)
-      optionIntCodec.encode(None) shouldBe BsonNull.VALUE
-      optionIntCodec.decode(new BsonInt32(123)) shouldBe Success(Some(123))
-      optionIntCodec.decode(BsonNull.VALUE) shouldBe Success(None)
+      val _ = optionIntCodec.encode(Some(123)) shouldBe new BsonInt32(123)
+      val _ = optionIntCodec.encode(None) shouldBe BsonNull.VALUE
+      val _ =
+        optionIntCodec.decode(new BsonInt32(123)) shouldBe Success(Some(123))
+      val _ = optionIntCodec.decode(BsonNull.VALUE) shouldBe Success(None)
     }
 
     it("should encode and decode List correctly") {
       val listIntCodec = BaseCodecs.listCodec[Int]
       val originalList = List(1, 2, 3)
       val encoded = listIntCodec.encode(originalList).asInstanceOf[BsonArray]
-      encoded.getValues.asScala
+      val _ = encoded.getValues.asScala
         .map(_.asInt32().getValue)
         .toList shouldBe originalList
-      listIntCodec.decode(encoded) shouldBe Success(originalList)
+      val _ = listIntCodec.decode(encoded) shouldBe Success(originalList)
     }
 
     it("should encode and decode Map correctly") {
@@ -196,44 +203,44 @@ class CodecSpec extends AnyFunSpec with Matchers {
         .asScala
         .map(e => e.getKey -> e.getValue.asString().getValue)
         .toMap
-      decodedMap shouldBe originalMap
-      mapStringCodec.decode(encoded) shouldBe Success(originalMap)
+      val _ = decodedMap shouldBe originalMap
+      val _ = mapStringCodec.decode(encoded) shouldBe Success(originalMap)
     }
 
     it("should handle mixed numeric types for intCodec") {
       val intCodec = BaseCodecs.intCodec
-      intCodec.decode(new BsonInt32(10)) shouldBe Success(10)
-      intCodec.decode(new BsonInt64(10L)) shouldBe Success(
+      val _ = intCodec.decode(new BsonInt32(10)) shouldBe Success(10)
+      val _ = intCodec.decode(new BsonInt64(10L)) shouldBe Success(
         10
       ) // truncation is fine for this test
-      intCodec.decode(new BsonDouble(10.5)) shouldBe Success(
+      val _ = intCodec.decode(new BsonDouble(10.5)) shouldBe Success(
         10
       ) // truncation is fine for this test
-      intCodec.decode(new BsonString("hello")) shouldBe a[Failure[?]]
+      val _ = intCodec.decode(new BsonString("hello")) shouldBe a[Failure[?]]
     }
 
     it("should handle mixed numeric types for longCodec") {
       val longCodec = BaseCodecs.longCodec
-      longCodec.decode(new BsonInt64(100L)) shouldBe Success(100L)
-      longCodec.decode(new BsonInt32(100)) shouldBe Success(100L)
-      longCodec.decode(new BsonDouble(100.5)) shouldBe Success(100L)
-      longCodec.decode(new BsonString("hello")) shouldBe a[Failure[?]]
+      val _ = longCodec.decode(new BsonInt64(100L)) shouldBe Success(100L)
+      val _ = longCodec.decode(new BsonInt32(100)) shouldBe Success(100L)
+      val _ = longCodec.decode(new BsonDouble(100.5)) shouldBe Success(100L)
+      val _ = longCodec.decode(new BsonString("hello")) shouldBe a[Failure[?]]
     }
 
     it("should handle mixed numeric types for floatCodec") {
       val floatCodec = BaseCodecs.floatCodec
-      floatCodec.decode(new BsonDouble(10.5f)) shouldBe Success(10.5f)
-      floatCodec.decode(new BsonInt32(10)) shouldBe Success(10.0f)
-      floatCodec.decode(new BsonInt64(10L)) shouldBe Success(10.0f)
-      floatCodec.decode(new BsonString("hello")) shouldBe a[Failure[?]]
+      val _ = floatCodec.decode(new BsonDouble(10.5f)) shouldBe Success(10.5f)
+      val _ = floatCodec.decode(new BsonInt32(10)) shouldBe Success(10.0f)
+      val _ = floatCodec.decode(new BsonInt64(10L)) shouldBe Success(10.0f)
+      val _ = floatCodec.decode(new BsonString("hello")) shouldBe a[Failure[?]]
     }
 
     it("should handle mixed numeric types for doubleCodec") {
       val doubleCodec = BaseCodecs.doubleCodec
-      doubleCodec.decode(new BsonDouble(10.5)) shouldBe Success(10.5)
-      doubleCodec.decode(new BsonInt32(10)) shouldBe Success(10.0)
-      doubleCodec.decode(new BsonInt64(10L)) shouldBe Success(10.0)
-      doubleCodec.decode(new BsonString("hello")) shouldBe a[Failure[?]]
+      val _ = doubleCodec.decode(new BsonDouble(10.5)) shouldBe Success(10.5)
+      val _ = doubleCodec.decode(new BsonInt32(10)) shouldBe Success(10.0)
+      val _ = doubleCodec.decode(new BsonInt64(10L)) shouldBe Success(10.0)
+      val _ = doubleCodec.decode(new BsonString("hello")) shouldBe a[Failure[?]]
     }
 
     it("should handle BsonNull for stringCodec") {
@@ -243,9 +250,9 @@ class CodecSpec extends AnyFunSpec with Matchers {
 
     it("should handle BsonBoolean for boolCodec") {
       val boolCodec = BaseCodecs.boolCodec
-      boolCodec.encode(true) shouldBe new BsonBoolean(true)
-      boolCodec.decode(new BsonBoolean(false)) shouldBe Success(false)
-      boolCodec.decode(new BsonInt32(1)) shouldBe a[Failure[?]]
+      val _ = boolCodec.encode(true) shouldBe new BsonBoolean(true)
+      val _ = boolCodec.decode(new BsonBoolean(false)) shouldBe Success(false)
+      val _ = boolCodec.decode(new BsonInt32(1)) shouldBe a[Failure[?]]
     }
   }
 
@@ -257,18 +264,21 @@ class CodecSpec extends AnyFunSpec with Matchers {
       val colorCodec = Codec.fromEnum(Color.values)
 
       // Test encoding
-      colorCodec.encode(Color.Red) shouldBe new BsonString("Red")
-      colorCodec.encode(Color.Green) shouldBe new BsonString("Green")
-      colorCodec.encode(Color.Blue) shouldBe new BsonString("Blue")
+      val _ = colorCodec.encode(Color.Red) shouldBe new BsonString("Red")
+      val _ = colorCodec.encode(Color.Green) shouldBe new BsonString("Green")
+      val _ = colorCodec.encode(Color.Blue) shouldBe new BsonString("Blue")
 
       // Test decoding
-      colorCodec.decode(new BsonString("Red")) shouldBe Success(Color.Red)
-      colorCodec.decode(new BsonString("Green")) shouldBe Success(Color.Green)
-      colorCodec.decode(new BsonString("Blue")) shouldBe Success(Color.Blue)
+      val _ =
+        colorCodec.decode(new BsonString("Red")) shouldBe Success(Color.Red)
+      val _ =
+        colorCodec.decode(new BsonString("Green")) shouldBe Success(Color.Green)
+      val _ =
+        colorCodec.decode(new BsonString("Blue")) shouldBe Success(Color.Blue)
 
       // Test decoding invalid value
-      colorCodec.decode(new BsonString("Yellow")) shouldBe a[Failure[?]]
-      colorCodec.decode(new BsonInt32(1)) shouldBe a[Failure[?]]
+      val _ = colorCodec.decode(new BsonString("Yellow")) shouldBe a[Failure[?]]
+      val _ = colorCodec.decode(new BsonInt32(1)) shouldBe a[Failure[?]]
     }
 
     it("should create codec from enum using custom string mapping") {
@@ -280,18 +290,23 @@ class CodecSpec extends AnyFunSpec with Matchers {
       val statusCodec = Codec.fromEnum(statusMapping)
 
       // Test encoding with custom mapping
-      statusCodec.encode(Color.Green) shouldBe new BsonString("active")
-      statusCodec.encode(Color.Red) shouldBe new BsonString("error")
-      statusCodec.encode(Color.Blue) shouldBe new BsonString("idle")
+      val _ = statusCodec.encode(Color.Green) shouldBe new BsonString("active")
+      val _ = statusCodec.encode(Color.Red) shouldBe new BsonString("error")
+      val _ = statusCodec.encode(Color.Blue) shouldBe new BsonString("idle")
 
       // Test decoding with custom mapping
-      statusCodec.decode(new BsonString("active")) shouldBe Success(Color.Green)
-      statusCodec.decode(new BsonString("error")) shouldBe Success(Color.Red)
-      statusCodec.decode(new BsonString("idle")) shouldBe Success(Color.Blue)
+      val _ = statusCodec.decode(new BsonString("active")) shouldBe Success(
+        Color.Green
+      )
+      val _ =
+        statusCodec.decode(new BsonString("error")) shouldBe Success(Color.Red)
+      val _ =
+        statusCodec.decode(new BsonString("idle")) shouldBe Success(Color.Blue)
 
       // Test decoding invalid value
-      statusCodec.decode(new BsonString("Red")) shouldBe a[Failure[?]]
-      statusCodec.decode(new BsonString("unknown")) shouldBe a[Failure[?]]
+      val _ = statusCodec.decode(new BsonString("Red")) shouldBe a[Failure[?]]
+      val _ =
+        statusCodec.decode(new BsonString("unknown")) shouldBe a[Failure[?]]
     }
 
     it("should handle roundtrip encoding/decoding for enum values") {

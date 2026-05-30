@@ -27,10 +27,9 @@ object BaseCodecs:
     * - encode: delegate to the doc codec (BsonDocument <: BsonValue)
     * - decode: accept any BsonValue; if it's a BsonDocument delegate, otherwise fail.
     */
-  given docToValue[A](using doc: BsonDocCodec[A]): BsonValueCodec[A] =
+  given docToValue: [A] => (doc: BsonDocCodec[A]) => BsonValueCodec[A] =
     new BsonValueCodec[A]:
       override def encode(in: A): BsonValue =
-        // doc.encode returns a BsonDocument, which is a BsonValue
         doc.encode(in)
 
       override def decode(in: BsonValue): Try[A] = in match
@@ -144,7 +143,7 @@ object BaseCodecs:
 
   /** Codec for Set[T] encoded as BsonArray.
     */
-  given setCodec[T](using elem: BsonValueCodec[T]): BsonValueCodec[Set[T]] =
+  given setCodec: [T] => (elem: BsonValueCodec[T]) => BsonValueCodec[Set[T]] =
     new BsonValueCodec[Set[T]]:
       override def encode(in: Set[T]): BsonValue =
         val array = new BsonArray()
@@ -162,38 +161,38 @@ object BaseCodecs:
 
   /** Codec for Option[A] where None encodes to BsonNull.
     */
-  given optionCodec[A](using c: BsonValueCodec[A]): BsonValueCodec[Option[A]] with
-    def encode(opt: Option[A]): BsonValue = opt match
-      case Some(v) => c.encode(v)
-      case None    => BsonNull.VALUE
+  given optionCodec: [A] => (c: BsonValueCodec[A]) => BsonValueCodec[Option[A]] =
+    new BsonValueCodec[Option[A]]:
+      def encode(opt: Option[A]): BsonValue = opt match
+        case Some(v) => c.encode(v)
+        case None    => BsonNull.VALUE
 
-    def decode(in: BsonValue): Try[Option[A]] =
-      in match
-        case _: BsonNull => Success(None)
-        case any         => c.decode(any).map(Some.apply)
+      def decode(in: BsonValue): Try[Option[A]] =
+        in match
+          case _: BsonNull => Success(None)
+          case any         => c.decode(any).map(Some.apply)
 
   /** Codec for List[A] encoded as BsonArray.
     */
-  given listCodec[A](using c: BsonValueCodec[A]): BsonValueCodec[List[A]] with
-    def encode(list: List[A]): BsonValue =
-      new BsonArray(list.map(c.encode).asJava)
+  given listCodec: [A] => (c: BsonValueCodec[A]) => BsonValueCodec[List[A]] =
+    new BsonValueCodec[List[A]]:
+      def encode(list: List[A]): BsonValue =
+        new BsonArray(list.map(c.encode).asJava)
 
-    def decode(in: BsonValue): Try[List[A]] = in match
-      case arr: BsonArray =>
-        val tries = arr.getValues.asScala.toList.map(v => c.decode(v))
-        Codec.sequenceT(tries)
-      case other =>
-        Failure(
-          new IllegalArgumentException(
-            s"Expected BsonArray but got ${other.getClass.getSimpleName}"
+      def decode(in: BsonValue): Try[List[A]] = in match
+        case arr: BsonArray =>
+          val tries = arr.getValues.asScala.toList.map(v => c.decode(v))
+          Codec.sequenceT(tries)
+        case other =>
+          Failure(
+            new IllegalArgumentException(
+              s"Expected BsonArray but got ${other.getClass.getSimpleName}"
+            )
           )
-        )
 
   /** Codec for Map[String, T] encoded as BsonDocument.
     */
-  given mapCodec[T](using
-      elem: BsonValueCodec[T]
-  ): BsonValueCodec[Map[String, T]] =
+  given mapCodec: [T] => (elem: BsonValueCodec[T]) => BsonValueCodec[Map[String, T]] =
     new BsonValueCodec[Map[String, T]]:
       override def encode(in: Map[String, T]): BsonValue =
         val doc = new BsonDocument()
@@ -218,7 +217,7 @@ object BaseCodecs:
 
   /** Codec for BigDecimal values stored as BsonString to preserve precision.
     */
-  given bigDecimalCodec: BsonValueCodec[BigDecimal] with
+  given bigDecimalCodec: BsonValueCodec[BigDecimal]:
     def encode(bd: BigDecimal): BsonValue = new BsonString(bd.toString)
 
     def decode(in: BsonValue): Try[BigDecimal] = in match
@@ -235,7 +234,7 @@ object BaseCodecs:
 
   /** Codec for BigInt values stored as BsonString to preserve precision.
     */
-  given bigIntCodec: BsonValueCodec[BigInt] with
+  given bigIntCodec: BsonValueCodec[BigInt]:
     def encode(bi: BigInt): BsonValue = new BsonString(bi.toString)
 
     def decode(in: BsonValue): Try[BigInt] = in match

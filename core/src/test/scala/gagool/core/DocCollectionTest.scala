@@ -46,15 +46,15 @@ class DocCollectionTest
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    collection.deleteMany(BsonUtil.empty).unsafeRunSync()
+    val _ = collection.deleteMany(BsonUtil.empty).unsafeRunSync()
   }
 
   "DocCollection" should "insert and find a single document" in {
     val testDoc = TestDoc("test", 1)
-    collection.insert(testDoc).unsafeRunSync()
+    val _ = collection.insert(testDoc).unsafeRunSync()
 
     val result = collection.find(BsonUtil.empty).one[TestDoc].unsafeRunSync()
-    result shouldBe Some(testDoc)
+    val _ = result shouldBe Some(testDoc)
   }
 
   it should "insert multiple documents" in {
@@ -62,22 +62,22 @@ class DocCollectionTest
       TestDoc("test1", 1),
       TestDoc("test2", 2)
     )
-    collection.insertAll(docs).unsafeRunSync()
+    val _ = collection.insertAll(docs).unsafeRunSync()
 
     val results =
       collection.find(BsonUtil.empty).list[TestDoc]().unsafeRunSync()
-    results should contain theSameElementsAs docs
+    val _ = results should contain theSameElementsAs docs
   }
 
   it should "update a single document" in {
     val document = TestDoc("test", 1)
-    collection.insert(document).unsafeRunSync()
+    val _ = collection.insert(document).unsafeRunSync()
 
     val update = set("value", 2)
-    collection.updateOne("name".is("test"), update).unsafeRunSync()
+    val _ = collection.updateOne("name".is("test"), update).unsafeRunSync()
 
     val result = collection.find(BsonUtil.empty).one[TestDoc].unsafeRunSync()
-    result shouldBe Some(TestDoc("test", 2))
+    val _ = result shouldBe Some(TestDoc("test", 2))
   }
 
   it should "update multiple documents" in {
@@ -85,10 +85,10 @@ class DocCollectionTest
       TestDoc("test", 1),
       TestDoc("test", 2)
     )
-    collection.insertAll(docs).unsafeRunSync()
+    val _ = collection.insertAll(docs).unsafeRunSync()
 
     val update = set("value", 3)
-    collection.updateMany("name".is("test"), update).unsafeRunSync()
+    val _ = collection.updateMany("name".is("test"), update).unsafeRunSync()
 
     val results =
       collection.find(BsonUtil.empty).list[TestDoc]().unsafeRunSync()
@@ -100,13 +100,13 @@ class DocCollectionTest
       TestDoc("test", 1),
       TestDoc("test", 2)
     )
-    collection.insertAll(docs).unsafeRunSync()
+    val _ = collection.insertAll(docs).unsafeRunSync()
 
-    collection.deleteOne(doc("name" -> "test")).unsafeRunSync()
+    val _ = collection.deleteOne(doc("name" -> "test")).unsafeRunSync()
 
     val results =
       collection.find(BsonUtil.empty).list[TestDoc]().unsafeRunSync()
-    results.size shouldBe 1
+    val _ = results.size shouldBe 1
   }
 
   it should "delete multiple documents" in {
@@ -115,19 +115,19 @@ class DocCollectionTest
       TestDoc("test", 2),
       TestDoc("other", 3)
     )
-    collection.insertAll(docs).unsafeRunSync()
+    val _ = collection.insertAll(docs).unsafeRunSync()
 
-    collection.deleteMany(doc("name" -> "test")).unsafeRunSync()
+    val _ = collection.deleteMany(doc("name" -> "test")).unsafeRunSync()
 
     val results =
       collection.find(BsonUtil.empty).list[TestDoc]().unsafeRunSync()
-    results.size shouldBe 1
-    results.head.name shouldBe "other"
+    val _ = results.size shouldBe 1
+    val _ = results.head.name shouldBe "other"
   }
 
   it should "find documents with projection" in {
     val document = TestDoc("test", 1)
-    collection.insert(document).unsafeRunSync()
+    val _ = collection.insert(document).unsafeRunSync()
 
     val projection = doc("name" -> 1)
     val result = collection
@@ -135,9 +135,9 @@ class DocCollectionTest
       .one[BsonDocument]
       .unsafeRunSync()
 
-    result.isDefined shouldBe true
-    result.get.containsKey("name") shouldBe true
-    result.get.containsKey("value") shouldBe false
+    val _ = result.isDefined shouldBe true
+    val _ = result.get.containsKey("name") shouldBe true
+    val _ = result.get.containsKey("value") shouldBe false
   }
 
   it should "find documents with sorting" in {
@@ -145,7 +145,7 @@ class DocCollectionTest
       TestDoc("test1", 2),
       TestDoc("test2", 1)
     )
-    collection.insertAll(docs).unsafeRunSync()
+    val _ = collection.insertAll(docs).unsafeRunSync()
 
     val order = doc("value" -> 1)
     val results = collection
@@ -153,8 +153,8 @@ class DocCollectionTest
       .list[TestDoc]()
       .unsafeRunSync()
 
-    results.size shouldBe 2
-    results.head.value shouldBe 1
+    val _ = results.size shouldBe 2
+    val _ = results.head.value shouldBe 1
   }
 
   it should "find documents with skip" in {
@@ -162,7 +162,7 @@ class DocCollectionTest
       TestDoc("test1", 1),
       TestDoc("test2", 2)
     )
-    collection.insertAll(docs).unsafeRunSync()
+    val _ = collection.insertAll(docs).unsafeRunSync()
 
     val opts = FinderOptions(skip = Some(1), readPreference = None)
     val results = collection
@@ -170,12 +170,12 @@ class DocCollectionTest
       .list[TestDoc]()
       .unsafeRunSync()
 
-    results.size shouldBe 1
+    val _ = results.size shouldBe 1
   }
 
   it should "handle custom read preferences" in {
     val testDoc = TestDoc("test", 1)
-    collection.insert(testDoc).unsafeRunSync()
+    val _ = collection.insert(testDoc).unsafeRunSync()
 
     val opts = FinderOptions(
       skip = None,
@@ -186,18 +186,18 @@ class DocCollectionTest
       .one[TestDoc]
       .unsafeRunSync()
 
-    result shouldBe Some(testDoc)
+    val _ = result shouldBe Some(testDoc)
   }
 
   it should "create an index" in {
     val indexKeys = doc("name" -> 1)
     val indexName = collection.createIndex(indexKeys).unsafeRunSync()
 
-    indexName should not be empty
+    val _ = indexName should not be empty
 
     val indexes = collection.listIndexes().unsafeRunSync()
     val indexNames = indexes.map(_.getString("name").getValue)
-    indexNames should contain(indexName)
+    val _ = indexNames should contain(indexName)
   }
 
   it should "create an index with options" in {
@@ -206,24 +206,24 @@ class DocCollectionTest
     val indexName =
       collection.createIndex(indexKeys, options).unsafeRunSync()
 
-    indexName shouldBe "unique_value_index"
+    val _ = indexName shouldBe "unique_value_index"
 
     val indexes = collection.listIndexes().unsafeRunSync()
     val uniqueIndex =
       indexes.find(_.getString("name").getValue == "unique_value_index")
-    uniqueIndex shouldBe defined
-    uniqueIndex.get.getBoolean("unique").getValue shouldBe true
+    val _ = uniqueIndex shouldBe defined
+    val _ = uniqueIndex.get.getBoolean("unique").getValue shouldBe true
   }
 
   it should "drop an index by keys" in {
     val indexKeys = doc("name" -> 1)
     val indexName = collection.createIndex(indexKeys).unsafeRunSync()
 
-    collection.dropIndex(indexKeys).unsafeRunSync()
+    val _ = collection.dropIndex(indexKeys).unsafeRunSync()
 
     val indexes = collection.listIndexes().unsafeRunSync()
     val indexNames = indexes.map(_.getString("name").getValue)
-    indexNames should not contain indexName
+    val _ = indexNames should not contain indexName
   }
 
   it should "drop an index by name" in {
@@ -236,15 +236,15 @@ class DocCollectionTest
 
     val indexes = collection.listIndexes().unsafeRunSync()
     val indexNames = indexes.map(_.getString("name").getValue)
-    indexNames should not contain "test_desc_index"
+    val _ = indexNames should not contain "test_desc_index"
   }
 
   it should "list all indexes" in {
     val indexes = collection.listIndexes().unsafeRunSync()
 
-    indexes should not be empty
+    val _ = indexes should not be empty
     val indexNames = indexes.map(_.getString("name").getValue)
-    indexNames should contain("_id_")
+    val _ = indexNames should contain("_id_")
   }
 
   it should "create compound index" in {
@@ -252,11 +252,11 @@ class DocCollectionTest
     val indexName =
       collection.createIndex(compoundKeys).unsafeRunSync()
 
-    indexName should not be empty
+    val _ = indexName should not be empty
 
     val indexes = collection.listIndexes().unsafeRunSync()
     val compoundIndex =
       indexes.find(_.getString("name").getValue == indexName)
-    compoundIndex shouldBe defined
+    val _ = compoundIndex shouldBe defined
   }
 }

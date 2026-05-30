@@ -32,11 +32,11 @@ private object Adt:
 
 class MacroSpec extends AnyFlatSpec with Matchers:
 
-  given BsonValueCodec[CustomerId] with
+  given BsonValueCodec[CustomerId]:
     def encode(in: CustomerId): BsonValue = new BsonString(in.value)
     def decode(in: BsonValue) = Try(CustomerId(in.asString().getValue))
 
-  given BsonDocCodec[Customer] with
+  given BsonDocCodec[Customer]:
     def encode(c: Customer): BsonDocument =
       val doc = new BsonDocument()
       doc.put("id", summon[BsonValueCodec[CustomerId]].encode(c.id))
@@ -125,8 +125,8 @@ class MacroSpec extends AnyFlatSpec with Matchers:
     val decodedCircle = codec.decode(encodedCircle).get
     val decodedRect = codec.decode(encodedRect).get
 
-    decodedCircle shouldEqual circle
-    decodedRect shouldEqual rectangle
+    val _ = decodedCircle shouldEqual circle
+    val _ = decodedRect shouldEqual rectangle
   }
 
   it.should("derive codec for ADTs") in {
@@ -137,8 +137,8 @@ class MacroSpec extends AnyFlatSpec with Matchers:
     val a = Adt.SingletonType
     val b = Adt.CaseClass("name")
 
-    codec.decode(codec.encode(a)).get shouldEqual a
-    codec.decode(codec.encode(b)).get shouldEqual b
+    val _ = codec.decode(codec.encode(a)).get shouldEqual a
+    val _ = codec.decode(codec.encode(b)).get shouldEqual b
   }
 
   it.should("handle union types via sealed trait") in {
@@ -157,6 +157,6 @@ class MacroSpec extends AnyFlatSpec with Matchers:
     val decodedNum = codec.decode(encodedNum).get
     val decodedStr = codec.decode(encodedStr).get
 
-    decodedNum shouldEqual num
-    decodedStr shouldEqual str
+    val _ = decodedNum shouldEqual num
+    val _ = decodedStr shouldEqual str
   }
