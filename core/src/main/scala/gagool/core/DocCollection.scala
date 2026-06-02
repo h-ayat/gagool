@@ -41,8 +41,13 @@ private object ReactiveUtil:
 
     Scope.run(effect)
 
-  def drain[T: Tag](pub: Publisher[T]): Unit < Async =
-    Scope.run(fromPublisher(pub, bufferSize = 1).map(_ => ()))
+  def drain[T: Tag](pub: Publisher[T]): Unit < Async = 
+    val effect = for 
+      subscriber <- fromPublisher(publisher = pub, bufferSize = 1 )
+      _ <- subscriber.run
+    yield ()
+    Scope.run(effect)
+
 
   def collect[T: Tag](pub: Publisher[T]): List[T] < Async =
     val effect: List[T] < (Scope & Async) =
