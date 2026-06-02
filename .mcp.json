@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "metals": {
-      "url": "http://localhost:40487/sse",
-      "type": "sse"
+      "url": "http://localhost:40487/mcp",
+      "type": "http"
     }
   }
 }

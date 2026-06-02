@@ -1,37 +1,68 @@
 package gagool.core
 
-import fs2.Stream
-import fs2.interop.reactivestreams.*
-import cats.effect.Async
-
+import kyo.*
+import org.reactivestreams.{Publisher, Subscriber, Subscription}
 import com.mongodb.ReadPreference
 import com.mongodb.client.model.IndexOptions
 import com.mongodb.client.model.UpdateOptions
-import com.mongodb.client.result.InsertManyResult
-import com.mongodb.client.result.InsertOneResult
-import com.mongodb.reactivestreams.client.FindPublisher
-import com.mongodb.reactivestreams.client.MongoCollection
-import gagool.bson.BsonDocDecoder
-import gagool.bson.BsonDocEncoder
+import com.mongodb.client.result.{
+  DeleteResult,
+  InsertManyResult,
+  InsertOneResult,
+  UpdateResult
+}
+import com.mongodb.reactivestreams.client.{FindPublisher, MongoCollection}
+import gagool.bson.{BsonDocDecoder, BsonDocEncoder}
 import org.bson.BsonDocument
 import org.bson.conversions.Bson
-
+import scala.concurrent.Promise
 import scala.jdk.CollectionConverters.*
-import fs2.interop.reactivestreams.fromPublisher
-import cats.ApplicativeThrow
-import scala.util.Try
 
-class DocCollection[E[_]: Async](
+private object ReactiveUtil:
+
+  import kyo.interop.reactivestreams.*
+  import org.reactivestreams.Publisher
+
+  def optional[T: Tag](pub: Publisher[T]): Maybe[T] < Async =
+    val effect: Maybe[T] < (Scope & Async) =
+      for
+        subscriber <- fromPublisher(pub, bufferSize = 1)
+        chunk <- subscriber.take(1).run
+      yield chunk.headMaybe
+
+    Scope.run(effect)
+
+  def single[T: Tag](pub: Publisher[T]): T < Async =
+    val effect: T < (Scope & Async) =
+      for
+        subscriber <- fromPublisher(pub, bufferSize = 1)
+        chunk <- subscriber.take(1).run
+      yield chunk.head
+
+    Scope.run(effect)
+
+  def drain[T: Tag](pub: Publisher[T]): Unit < Async =
+    Scope.run(fromPublisher(pub, bufferSize = 1).map(_ => ()))
+
+  def collect[T: Tag](pub: Publisher[T]): List[T] < Async =
+    val effect: List[T] < (Scope & Async) =
+      for
+        subscriber <- fromPublisher(pub, bufferSize = 100)
+        chunk <- subscriber.run
+      yield chunk.toList
+    Scope.run(effect)
+
+class DocCollection(
     val base: MongoCollection[BsonDocument],
     readPreference: ReadPreference
-) {
+):
 
   def find[F: BsonDocEncoder, P: BsonDocEncoder, O: BsonDocEncoder](
       filter: F,
       projection: Option[P] = None,
       order: Option[O] = None,
       options: FinderOptions = FinderOptions.default
-  ): Finder[E] = {
+  ): Finder =
     Finder(
       summon[BsonDocEncoder[F]].encode(filter),
       projection.map(summon[BsonDocEncoder[P]].encode),
@@ -39,73 +70,64 @@ class DocCollection[E[_]: Async](
       options,
       this
     )
-  }
 
-  def insert[T: BsonDocEncoder](doc: T): E[InsertOneResult] =
-    fromPublisher(
-      base.insertOne(summon[BsonDocEncoder[T]].encode(doc)),
-      1
-    ).compile.lastOrError
+  def insert[T: BsonDocEncoder](doc: T): InsertOneResult < Async =
+    ReactiveUtil.single(base.insertOne(summon[BsonDocEncoder[T]].encode(doc)))
 
-  def insertAll[T: BsonDocEncoder](docs: List[T]): E[InsertManyResult] =
+  def insertAll[T: BsonDocEncoder](docs: List[T]): InsertManyResult < Async =
     val bsonDocs = docs.map(summon[BsonDocEncoder[T]].encode).asJava
-    fromPublisher(base.insertMany(bsonDocs), 1).compile.lastOrError
+    ReactiveUtil.single(base.insertMany(bsonDocs))
 
   def updateOne[F: BsonDocEncoder, U: BsonDocEncoder](
       filter: F,
       update: U,
       upsert: Boolean = false
-  ): E[com.mongodb.client.result.UpdateResult] =
+  ): UpdateResult < Async =
     val opts = new UpdateOptions().upsert(upsert)
     val f: Bson = summon[BsonDocEncoder[F]].encode(filter)
     val u: Bson = summon[BsonDocEncoder[U]].encode(update)
-    fromPublisher(base.updateOne(f, u, opts), 1).compile.lastOrError
+    ReactiveUtil.single(base.updateOne(f, u, opts))
 
   def updateMany[F: BsonDocEncoder, U: BsonDocEncoder](
       filter: F,
       update: U,
       upsert: Boolean = false
-  ): E[com.mongodb.client.result.UpdateResult] =
+  ): UpdateResult < Async =
     val opts = new UpdateOptions().upsert(upsert)
     val f: Bson = summon[BsonDocEncoder[F]].encode(filter)
     val u: Bson = summon[BsonDocEncoder[U]].encode(update)
-    fromPublisher(base.updateMany(f, u, opts), 1).compile.lastOrError
+    ReactiveUtil.single(base.updateMany(f, u, opts))
 
-  def deleteOne[F: BsonDocEncoder](
-      filter: F
-  ): E[com.mongodb.client.result.DeleteResult] =
-    val f: Bson = summon[BsonDocEncoder[F]].encode(filter)
-    fromPublisher(base.deleteOne(f), 1).compile.lastOrError
+  def deleteOne[F: BsonDocEncoder](filter: F): DeleteResult < Async =
+    ReactiveUtil.single(
+      base.deleteOne(summon[BsonDocEncoder[F]].encode(filter))
+    )
 
-  def deleteMany[F: BsonDocEncoder](
-      filter: F
-  ): E[com.mongodb.client.result.DeleteResult] =
-    val f: Bson = summon[BsonDocEncoder[F]].encode(filter)
-    fromPublisher(base.deleteMany(f), 1).compile.lastOrError
+  def deleteMany[F: BsonDocEncoder](filter: F): DeleteResult < Async =
+    ReactiveUtil.single(
+      base.deleteMany(summon[BsonDocEncoder[F]].encode(filter))
+    )
 
   def createIndex[K: BsonDocEncoder](
       keys: K,
       options: IndexOptions = new IndexOptions()
-  ): E[String] =
-    val k: Bson = summon[BsonDocEncoder[K]].encode(keys)
-    fromPublisher(base.createIndex(k, options), 1).compile.lastOrError
+  ): String < Async =
+    ReactiveUtil.single(
+      base.createIndex(summon[BsonDocEncoder[K]].encode(keys), options)
+    )
 
-  def dropIndex[K: BsonDocEncoder](keys: K): E[Unit] =
-    val k: Bson = summon[BsonDocEncoder[K]].encode(keys)
-    fromPublisher(base.dropIndex(k), 1).compile.drain
+  def dropIndex[K: BsonDocEncoder](keys: K): Unit < Async =
+    ReactiveUtil.drain(base.dropIndex(summon[BsonDocEncoder[K]].encode(keys)))
 
-  def dropIndex(indexName: String): E[Unit] =
-    fromPublisher(base.dropIndex(indexName), 1).compile.drain
+  def dropIndex(indexName: String): Unit < Async = {
+    ReactiveUtil.drain(base.dropIndex(indexName))
+  }
 
-  def dropCollection(): E[Unit] =
-    fromPublisher(base.drop(), 1).compile.drain
+  def dropCollection(): Unit < Async =
+    ReactiveUtil.drain(base.drop())
 
-  def listIndexes(): E[List[BsonDocument]] =
-    fromPublisher(base.listIndexes(), 256)
-      .map(_.toBsonDocument)
-      .compile
-      .toList
-}
+  def listIndexes(): List[BsonDocument] < Async =
+    ReactiveUtil.collect(base.listIndexes()).map(_.map(_.toBsonDocument))
 
 case class FinderOptions(
     skip: Option[Int],
@@ -113,17 +135,16 @@ case class FinderOptions(
     bufferSize: Int = 256
 )
 
-object FinderOptions {
-  val default = FinderOptions(None, None)
-}
+object FinderOptions:
+  val default: FinderOptions = FinderOptions(None, None)
 
-case class Finder[E[_]: Async](
+case class Finder(
     filter: BsonDocument,
     projection: Option[BsonDocument],
     order: Option[BsonDocument],
     options: FinderOptions,
-    col: DocCollection[E]
-) {
+    col: DocCollection
+):
 
   private lazy val builder: FindPublisher[BsonDocument] =
     val base = options.readPreference match
@@ -135,35 +156,20 @@ case class Finder[E[_]: Async](
     options.skip.foreach(finder.skip)
     finder
 
-  def one[T](using
+  def one[T](using reader: BsonDocDecoder[T]): Maybe[T] < Async =
+    ReactiveUtil
+      .optional(builder.limit(1).first())
+      .map(_.map(doc => reader.decode(doc).get))
+
+  def list[T](limit: Option[Int] = None)(using
       reader: BsonDocDecoder[T]
-  ): E[Option[T]] =
-    StreamUtil
-      .unwrap(
-        fromPublisher(builder.limit(1).first(), 1)
-          .map(reader.decode)
-      )
-      .compile
-      .last
+  ): List[T] < Async =
+    val pub = limit.map(builder.limit).getOrElse(builder)
+    ReactiveUtil.collect(pub).map(_.map(reader.decode(_).get))
 
-  def list[T](
-      limit: Option[Int] = None
-  )(using reader: BsonDocDecoder[T]) = {
-    StreamUtil
-      .unwrap(
-        fromPublisher(
-          limit.map(builder.limit).getOrElse(builder),
-          options.bufferSize
-        )
-          .map(reader.decode)
-      )
-      .compile
-      .toList
-  }
-
-  def source[T: BsonDocDecoder](): Stream[E, T] =
-    StreamUtil.unwrap(
-      fromPublisher(builder, options.bufferSize)
-        .map(summon[BsonDocDecoder[T]].decode)
+  def source[T: {BsonDocDecoder, Tag}](): Stream[T, Async] =
+    Stream.init(
+      ReactiveUtil
+        .collect(builder)
+        .map(_.map(summon[BsonDocDecoder[T]].decode(_).get))
     )
-}
